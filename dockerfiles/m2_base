@@ -85,11 +85,21 @@ WORKDIR /M2/M2
 # Build and configure Macaulay2
 RUN make get-tools && make && \
     ./configure --enable-download --with-mpir-config-options="ABI=32" --build=i386-linux-gnu --host=i386-linux-gnu && \
-    make MakeDocumentation=false MakeHTML=false MakeInfo=false MakePDF=false RemakeAllDocumentation=false IgnoreExampleErrors=false CheckDocumentation=false RerunExamples=false
+    make PACKAGES="" MakeDocumentation=false MakeHTML=false MakeInfo=false MakePDF=false RemakeAllDocumentation=false IgnoreExampleErrors=false CheckDocumentation=false RerunExamples=false 
 
 # Determine runtime libraries required by Macaulay2 and copy them to a specific directory
 RUN mkdir /required-libs && \
     ldd /M2/M2/usr-dist/i386-Linux-Ubuntu-18.04/bin/M2-binary | tr -s '[:space:]' '\n' | grep '^/' | xargs -I {} cp {} /required-libs
+
+RUN rm -rf /M2/.git
+RUN rm -rf .git
+RUN rm -rf BUILD
+RUN rm -rf usr-build
+RUN rm -rf libraries
+RUN rm -rf Macualay2/bin/*
+RUN rm -rf Macaulay2/packages/*
+RUN rm -rf usr-host
+
 
 # Start a new, final image to reduce size
 FROM i386/debian:buster
