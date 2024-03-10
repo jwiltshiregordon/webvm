@@ -99,7 +99,7 @@ RUN rm -rf libraries
 RUN rm -rf Macualay2/bin/*
 RUN rm -rf Macaulay2/packages/*
 RUN rm -rf usr-host
-
+RUN rm -rf submodules
 
 # Start a new, final image to reduce size
 FROM i386/debian:buster
