@@ -1,109 +1,104 @@
-# Use an Ubuntu base image with 32-bit architecture support
-FROM i386/ubuntu:latest
+# Start with a builder image
+FROM i386/ubuntu:latest as builder
 
 # Set noninteractive to avoid interactive prompts during the build
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Update the system and install software-properties-common
-# This package is needed to manage the repositories effectively
-RUN apt-get update && \
-    apt-get install -y software-properties-common
-
-# Add the Macaulay2 PPA for additional dependencies
-RUN add-apt-repository ppa:macaulay2/macaulay2 && \
-    apt-get update
-
 # Install necessary packages
-RUN apt-get install -y -q --no-install-recommends \
-    4ti2 \
-    autoconf \
-    bison \
-    curl \
-    emacs \
-    fflas-ffpack \
-    flex \
-    g++ \
-    gcc \
-    gfortran \
-    install-info \
-    libboost-dev \
-    libboost-math-dev \
-    libboost-regex-dev \
-    libboost-stacktrace-dev \
-    libc6-dev \
-    libcdd-dev \
-    libffi-dev \
-    libgdbm-dev \
-    libgivaro-dev \
-    libglpk-dev \
-    libgmp3-dev \
-    libgtest-dev \
-    liblapack-dev \
-    liblzma-dev \
-    libmpc-dev \
-    libmpfi-dev \
-    libmpfr-dev \
-    libncurses5-dev \
-    libntl-dev \
-    libreadline-dev \
-    libsingular-dev \
-    libtool \
-    libxml2-dev \
-    libz-dev \
-    lrslib \
-    lsb-release \
-    make \
-    normaliz \
-    npm \
-    openssh-server \
-    patch \
-    pinentry-curses \
-    pkg-config \
-    singular-data \
-    time \
-    unzip \
-    xbase-clients \
-    yasm \
-    zlib1g-dev \
-    polymake \
-    git \
-    dpkg-dev \
-    gfan \
-    libeigen3-dev \
-    libtool-bin \
-    frobby \
-    libfrobby-dev \
-    libnauty2-dev \
-    libnauty2 \
-    nauty \
-    nauty-doc \
-    coinor-csdp \
-    coinor-csdp-doc \
-    libflint-dev \
-    libtbb-dev && \
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository ppa:macaulay2/macaulay2 && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+      4ti2 \
+      autoconf \
+      bison \
+      curl \
+      emacs \
+      fflas-ffpack \
+      flex \
+      g++ \
+      gcc \
+      gfortran \
+      install-info \
+      libboost-dev \
+      libboost-math-dev \
+      libboost-regex-dev \
+      libboost-stacktrace-dev \
+      libc6-dev \
+      libcdd-dev \
+      libffi-dev \
+      libgdbm-dev \
+      libgivaro-dev \
+      libglpk-dev \
+      libgmp3-dev \
+      libgtest-dev \
+      liblapack-dev \
+      liblzma-dev \
+      libmpc-dev \
+      libmpfi-dev \
+      libmpfr-dev \
+      libncurses5-dev \
+      libntl-dev \
+      libreadline-dev \
+      libsingular-dev \
+      libtool \
+      libxml2-dev \
+      libz-dev \
+      lrslib \
+      lsb-release \
+      make \
+      normaliz \
+      npm \
+      openssh-server \
+      patch \
+      pinentry-curses \
+      pkg-config \
+      singular-data \
+      time \
+      unzip \
+      xbase-clients \
+      yasm \
+      zlib1g-dev \
+      polymake \
+      git \
+      dpkg-dev \
+      gfan \
+      libeigen3-dev \
+      libtool-bin \
+      frobby \
+      libfrobby-dev \
+      libnauty2-dev \
+      libnauty2 \
+      nauty \
+      nauty-doc \
+      coinor-csdp \
+      coinor-csdp-doc \
+      libflint-dev \
+      libtbb-dev && \
+    git clone https://github.com/Macaulay2/M2.git /M2 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-
-
-RUN git clone https://github.com/Macaulay2/M2.git
-
-# Set the working directory to where Macaulay2 source is copied
 WORKDIR /M2/M2
 
-RUN make get-tools
-RUN make
+# Build and configure Macaulay2
+RUN make get-tools && make && \
+    ./configure --enable-download --with-mpir-config-options="ABI=32" --build=i386-linux-gnu --host=i386-linux-gnu && \
+    make MakeDocumentation=false MakeHTML=false MakeInfo=false MakePDF=false RemakeAllDocumentation=false IgnoreExampleErrors=false CheckDocumentation=false RerunExamples=false
 
-# Configure Macaulay2 with specific options for 32-bit architecture
-RUN ./configure --enable-download --with-mpir-config-options="ABI=32" --build=i386-linux-gnu --host=i386-linux-gnu
+# Determine runtime libraries required by Macaulay2 and copy them to a specific directory
+RUN mkdir /required-libs && \
+    ldd /M2/M2/usr-dist/i386-Linux-Ubuntu-18.04/bin/M2-binary | tr -s '[:space:]' '\n' | grep '^/' | xargs -I {} cp {} /required-libs
 
-# Build Macaulay2 (this might take some time)
-RUN make MakeDocumentation=false MakeHTML=false MakeInfo=false MakePDF=false RemakeAllDocumentation=false IgnoreExampleErrors=false CheckDocumentation=false RerunExamples=false
+# Start a new, final image to reduce size
+FROM i386/debian:buster
 
-# Optional: run 'make check' to test or 'make install' to install
-# RUN make check
-# RUN make install
+# Copy the required libraries
+COPY --from=builder /required-libs /usr/lib/
+
+# Copy the Macaulay2 installation
+COPY --from=builder /M2 /M2
 
 # The default command to run when the container starts
-# Adjust this if you need the container to run specific tasks
 CMD ["/M2/M2/usr-dist/i386-Linux-Ubuntu-18.04/bin/M2"]
