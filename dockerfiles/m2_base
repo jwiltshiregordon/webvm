@@ -96,10 +96,14 @@ RUN rm -rf .git
 RUN rm -rf BUILD
 RUN rm -rf usr-build
 RUN rm -rf libraries
-RUN rm -rf Macualay2/bin/*
-RUN rm -rf Macaulay2/packages/*
 RUN rm -rf usr-host
 RUN rm -rf submodules
+
+RUN tar -czvf usr-dist.tar.gz usr-dist
+RUN rm -rf usr-dist
+
+RUN tar -czvf Macaulay2.tar.gz Macaulay2
+RUN rm -rf Macaulay2
 
 # Start a new, final image to reduce size
 FROM i386/debian:buster
@@ -111,4 +115,5 @@ COPY --from=builder /required-libs /usr/lib/
 COPY --from=builder /M2 /M2
 
 # The default command to run when the container starts
-CMD ["/M2/M2/usr-dist/i386-Linux-Ubuntu-18.04/bin/M2"]
+#CMD ["/M2/M2/usr-dist/i386-Linux-Ubuntu-18.04/bin/M2"]
+CMD ["bash"]
